@@ -102,6 +102,10 @@ td.ret{font-family:var(--mono);font-weight:500;border-radius:0}
 .spark{width:64px;height:22px;display:block}
 .starc{width:34px;text-align:center;color:var(--faint)}
 .star.on{color:var(--amber)}
+.xbi{color:var(--teal);font-weight:700;font-size:13px;margin-left:1px;vertical-align:top;cursor:help}
+td.live{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
+.livedot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--faint);margin-left:5px;vertical-align:middle}
+.livedot.on{background:var(--up)}
 
 /* ---------- detail ---------- */
 .scrim{position:fixed;inset:0;background:rgba(5,8,12,.6);backdrop-filter:blur(3px);z-index:40;opacity:0;
@@ -248,6 +252,7 @@ canvas{display:block;width:100%}
     <input id="capMax" type="number" min="0" step="0.1" placeholder="max">
   </div>
   <div class="seg" id="favSeg" style="padding:0"><button data-fav class="" style="display:flex;gap:5px;align-items:center"><span style="color:var(--amber)">★</span>Watchlist</button></div>
+  <div class="seg" id="xbiSeg" style="padding:0"><button data-xbi class="" style="display:flex;gap:4px;align-items:center"><span class="xbi" style="margin:0;vertical-align:baseline">*</span>XBI</button></div>
   <button class="linkish" id="resetBtn">Reset</button>
   <div class="grow"></div>
   <div class="count"><b id="cnt">0</b> names</div>
@@ -260,7 +265,7 @@ canvas{display:block;width:100%}
   </table>
 </div>
 
-<div class="foot"><span>HELIX — biotech &amp; pharma research terminal</span><span id="footData">Demo dataset · illustrative figures</span><span>Sortable · filterable · tap a row for detail</span></div>
+<div class="foot"><span>HELIX — biotech &amp; pharma research terminal</span><span id="footData">Demo dataset · illustrative figures</span><span><b class="xbi" style="margin:0">*</b> XBI constituent</span></div>
 
 <div class="scrim" id="scrim"></div>
 <aside class="detail" id="detail" aria-hidden="true"></aside>
@@ -273,6 +278,7 @@ canvas{display:block;width:100%}
     <h2>About this data</h2>
     <p id="infoBody"></p>
     <p>The interface — sorting, filtering, charts, the stock detail view — is fully real. Only the <i>numbers</i> are illustrative until you connect a feed.</p>
+    <p><b class="xbi" style="margin:0">*</b> next to a ticker marks a current <b>S&amp;P Biotech (XBI)</b> constituent. In demo mode only the confirmed top names are flagged; when you build live data, the full, current XBI membership is loaded automatically from State Street's daily holdings file. Use the <b>XBI</b> filter to show only constituents.</p>
     <p><b>To load your real numbers:</b> run the included <code>build_dashboard_data.py</code> against <code>tickers.csv</code>. It writes a <code>data.json</code> next to this page; reload and the badge turns green with your live snapshot.</p>
     <p style="margin-top:14px"><button class="btn" data-close>Got it</button></p>
   </div>
@@ -288,6 +294,7 @@ canvas{display:block;width:100%}
     <p><b>2 · Live quotes &amp; news</b> in the detail view via a free <a class="linkish" href="https://finnhub.io" target="_blank" rel="noopener">Finnhub</a> key (optional; US names most reliable):</p>
     <div class="key"><input id="fhKey" placeholder="Finnhub API key (optional)" spellcheck="false"><button class="btn" id="saveKey">Save</button></div>
     <p style="font-size:11.5px;color:var(--faint)">Stored only in this browser. Leave blank to stay on snapshot/demo data.</p>
+    <p>With a key connected, a <b>Live</b> column appears in the table (US names only): it shows the <b>pre-market</b> move before the open and the live <b>intraday</b> change once the market opens. It fetches the rows on screen, so it fills in as you scroll. Pre-market prints for thinly-traded small caps may be missing, and true pre-market data depends on your Finnhub tier.</p>
   </div>
 </div>
 
@@ -308,6 +315,10 @@ const fmtVol=v=>{ if(v==null||isNaN(v))return'—'; const a=Math.abs(v);
   if(a>=1e9)return(v/1e9).toFixed(2)+'B'; if(a>=1e6)return(v/1e6).toFixed(2)+'M';
   if(a>=1e3)return(v/1e3).toFixed(1)+'K'; return v.toFixed(0);};
 const fmtPx=v=>v==null||isNaN(v)?'—':'$'+v.toFixed(2);
+// Current XBI (SPDR S&P Biotech ETF) constituents — confirmed top names (State Street / stockanalysis, Jun 2026).
+// In LIVE mode the full, current set comes from data.json (built from State Street's daily file).
+const XBI=new Set(["TGTX","TVTX","TWST","ALKS","RVMD","ARWR","KRYS","EXEL","BEAM","NUVL","CYTK","NBIX","PTCT","VCYT","APGE","MDGL","PTGX","NTRA","MIRM","MRNA","SYRE","KYMR","SRRK","RYTM","ARQT","VKTX","PRAX","ORKA","CGON","APLS","SMMT","ALNY","UTHR","INSM","MLYS","MTSR","VSTM"]);
+function inXBI(t){ if(REAL&&REAL.map&&REAL.map[t]&&('xbi' in REAL.map[t])) return !!REAL.map[t].xbi; return XBI.has(t); }
 
 /* deterministic PRNG so demo data is stable per ticker */
 function hash(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return h>>>0;}
@@ -417,6 +428,7 @@ const COLS=[
  {k:'mcap',t:'Mkt Cap',kind:'n'},
  {k:'last',t:'Price',kind:'n'},
  {k:'day',t:'Day',kind:'n',heat:true},
+ {k:'live',t:'Live',kind:'n'},
  {k:'r1W',t:'1W',kind:'n',heat:true},
  {k:'r1M',t:'1M',kind:'n',heat:true},
  {k:'rYTD',t:'YTD',kind:'n',heat:true},
@@ -430,22 +442,26 @@ const COLS=[
 ];
 let ROWS=[], sortKey='mcap', sortDir=-1;
 const FAV=new Set(JSON.parse(localStorage.getItem('helix_fav')||'[]'));
-let filter={region:'all',q:'',capMin:null,capMax:null,fav:false};
+let filter={region:'all',q:'',capMin:null,capMax:null,fav:false,xbi:false};
 
 function buildRows(){ ROWS=UNIVERSE.map(metrics); }
 function header(){
-  const tr=$('#hrow'); tr.innerHTML='';
-  COLS.forEach(c=>{const th=document.createElement('th');
-    th.textContent=c.t; if(c.l)th.classList.add('l'); if(c.k==='t')th.classList.add('stickL');
+  const tr=$('#hrow'); tr.innerHTML=''; const ls=liveSession();
+  COLS.forEach(c=>{
+    if(c.k==='live'&&!FH_KEY)return;            // live column only when a Finnhub key is connected
+    const th=document.createElement('th'); const lab=c.k==='live'?ls.label+' %':c.t;
+    th.textContent=lab; if(c.l)th.classList.add('l'); if(c.k==='t')th.classList.add('stickL');
     if(c.sort!==false){th.dataset.k=c.k;
-      if(c.k===sortKey){th.classList.add('on');th.innerHTML=c.t+'<span class="car">'+(sortDir<0?'▼':'▲')+'</span>';}
+      if(c.k===sortKey){th.classList.add('on');th.innerHTML=lab+'<span class="car">'+(sortDir<0?'▼':'▲')+'</span>';}
       th.onclick=()=>{ if(sortKey===c.k)sortDir*=-1; else{sortKey=c.k;sortDir=(c.kind==='s')?1:-1;} header();render();};
     }
+    if(c.k==='live')th.insertAdjacentHTML('beforeend',' <span class="livedot'+(ls.active?' on':'')+'"></span>');
     tr.appendChild(th);});
 }
 function passes(m){
   if(filter.region!=='all'&&m.rec.r!==filter.region)return false;
   if(filter.fav&&!FAV.has(m.rec.t))return false;
+  if(filter.xbi&&!inXBI(m.rec.t))return false;
   if(filter.capMin!=null&&(m.mcap==null||m.mcap<filter.capMin*1e9))return false;
   if(filter.capMax!=null&&(m.mcap==null||m.mcap>filter.capMax*1e9))return false;
   if(filter.q){const q=filter.q.toLowerCase(); if(!m.rec.t.toLowerCase().includes(q)&&!(m.rec.n||'').toLowerCase().includes(q))return false;}
@@ -456,6 +472,7 @@ function render(){
   const k=sortKey,d=sortDir;
   list.sort((a,b)=>{ let av,bv;
     if(k==='mcap'){av=a.mcap;bv=b.mcap;} else if(['t','n','r'].includes(k)){av=(a.rec[k]||'');bv=(b.rec[k]||'');return av.localeCompare(bv)*d;}
+    else if(k==='live'){av=(LIVE[a.rec.t]||{}).dp;bv=(LIVE[b.rec.t]||{}).dp;}
     else{av=a[k];bv=b[k];}
     av=(av==null||isNaN(av))?-Infinity:av; bv=(bv==null||isNaN(bv))?-Infinity:bv; return (av-bv)*d;});
   const tb=$('#tbody'); tb.innerHTML='';
@@ -464,12 +481,13 @@ function render(){
     const tr=document.createElement('tr'); tr.onclick=()=>openDetail(m.rec);
     const fav=FAV.has(m.rec.t);
     tr.innerHTML=
-      `<td class="l stickL"><span class="star ${fav?'on':''}" data-fav="${m.rec.t}">${fav?'★':'☆'}</span> <span class="tk">${m.rec.t}</span></td>`+
+      `<td class="l stickL"><span class="star ${fav?'on':''}" data-fav="${m.rec.t}">${fav?'★':'☆'}</span> <span class="tk">${m.rec.t}${inXBI(m.rec.t)?'<span class="xbi" title="S&P Biotech (XBI) constituent">*</span>':''}</span></td>`+
       `<td class="l"><span class="co">${m.rec.n||''}</span></td>`+
       `<td class="l"><span class="rchip">${m.rec.r==='ex-US'?'EX':'US'}</span></td>`+
       `<td class="num">${fmtUSD(m.mcap)}</td>`+
       `<td class="num">${fmtPx(m.last)}</td>`+
       `<td class="ret ${cls(m.day)}" style="${heat(m.day)}">${fmtPct(m.day)}</td>`+
+      (FH_KEY?(m.rec.r==='US'?`<td class="ret live" data-t="${m.rec.t}">${liveCell(m.rec.t)}</td>`:`<td class="ret" style="color:var(--faint)">—</td>`):'')+
       `<td class="ret ${cls(m.r1W)}" style="${heat(m.r1W)}">${fmtPct(m.r1W)}</td>`+
       `<td class="ret ${cls(m.r1M)}" style="${heat(m.r1M)}">${fmtPct(m.r1M)}</td>`+
       `<td class="ret ${cls(m.rYTD)}" style="${heat(m.rYTD)}">${fmtPct(m.rYTD)}</td>`+
@@ -487,7 +505,45 @@ function render(){
   $$('.star',tb).forEach(el=>el.onclick=e=>{e.stopPropagation();const t=el.dataset.fav;
     if(FAV.has(t))FAV.delete(t);else FAV.add(t);
     localStorage.setItem('helix_fav',JSON.stringify([...FAV])); render();});
+  observeLive();
 }
+
+/* ---------------- live pre-market / intraday column (Finnhub, US only) ---------------- */
+const LIVE={}; const liveQueue=[]; const liveQueued=new Set(); let liveTimer=null, liveObs=null;
+function liveSession(){
+  const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+  const g=t=>(p.find(x=>x.type===t)||{}).value; let hh=(+g('hour'))%24; const mins=hh*60+(+g('minute')); const wd=g('weekday');
+  if(wd==='Sat'||wd==='Sun') return {label:'Last',active:false};
+  if(mins>=240&&mins<570)  return {label:'Pre-mkt',active:true};   // 4:00–9:30 ET
+  if(mins>=570&&mins<960)  return {label:'Live',active:true};      // 9:30–16:00 ET
+  if(mins>=960&&mins<1200) return {label:'After-hrs',active:true}; // 16:00–20:00 ET
+  return {label:'Last',active:false};
+}
+function liveCell(t){const x=LIVE[t];
+  if(x&&x.dp!=null&&!isNaN(x.dp))return `<span class="${cls(x.dp)}">${fmtPctS(x.dp/100)}</span>`;
+  if(x&&x.err)return '<span style="color:var(--faint)">—</span>';
+  return '<span style="color:var(--faint)">·</span>';}
+function updateLiveCell(t){const el=document.querySelector('.live[data-t="'+t+'"]'); if(el)el.innerHTML=liveCell(t);}
+function enqueueLive(t){ if(!FH_KEY)return; const x=LIVE[t]; if(x&&Date.now()-x.ts<40000)return;
+  if(liveQueued.has(t))return; liveQueued.add(t); liveQueue.push(t); startLive(); }
+function startLive(){ if(liveTimer)return; liveTimer=setInterval(async()=>{
+  if(!liveQueue.length){clearInterval(liveTimer);liveTimer=null;return;}
+  const t=liveQueue.shift(); liveQueued.delete(t);
+  try{const j=await (await fetch('https://finnhub.io/api/v1/quote?symbol='+encodeURIComponent(t)+'&token='+FH_KEY)).json();
+    LIVE[t]=(j&&j.c)?{dp:j.dp,c:j.c,pc:j.pc,ts:Date.now()}:{dp:null,err:true,ts:Date.now()};
+  }catch(e){LIVE[t]={dp:null,err:true,ts:Date.now()};}
+  updateLiveCell(t);
+},1200); }  // ~50 calls/min, under Finnhub's free limit
+function observeLive(){ if(!FH_KEY)return; if(liveObs)liveObs.disconnect();
+  liveObs=new IntersectionObserver(es=>es.forEach(e=>{ if(!e.isIntersecting)return;
+    const t=e.target.dataset.t, rec=UNIVERSE.find(u=>u.t===t); if(rec&&rec.r==='US')enqueueLive(t);}),
+    {root:$('.tablewrap'),rootMargin:'120px'});
+  $$('.live').forEach(el=>liveObs.observe(el)); }
+setInterval(()=>{ if(!FH_KEY)return; const wrap=$('.tablewrap'); if(!wrap)return; const r=wrap.getBoundingClientRect();
+  $$('.live').forEach(el=>{const b=el.getBoundingClientRect(); if(b.bottom>r.top&&b.top<r.bottom){
+    const t=el.dataset.t,x=LIVE[t]; if(x&&Date.now()-x.ts<35000)return;
+    const rec=UNIVERSE.find(u=>u.t===t); if(rec&&rec.r==='US')enqueueLive(t);}});},45000);   // refresh on-screen rows
+setInterval(()=>{ if($('#hrow')&&FH_KEY)header(); },60000);   // re-label header as the session changes
 
 /* ---------------- detail view ---------------- */
 let curRange='1Y', curRet='1Y', curVol='1Y', curMetric=null;
@@ -500,7 +556,7 @@ function openDetail(rec){
   d.innerHTML=`
    <div class="dhead">
      <div class="dtop">
-       <div><div class="dtk">${rec.t}</div><div class="dco">${rec.n||''} · ${rec.r}</div></div>
+       <div><div class="dtk">${rec.t}${inXBI(rec.t)?'<span class="xbi">*</span>':''}</div><div class="dco">${rec.n||''} · ${rec.r}</div></div>
        <button class="dclose" id="dClose">✕</button>
      </div>
      <div class="dprice">
@@ -733,10 +789,12 @@ $('#regionSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;
 $('#capMin').oninput=e=>{filter.capMin=e.target.value===''?null:+e.target.value;render();};
 $('#capMax').oninput=e=>{filter.capMax=e.target.value===''?null:+e.target.value;render();};
 $('#favSeg').onclick=()=>{filter.fav=!filter.fav;$('#favSeg').querySelector('button').classList.toggle('on',filter.fav);render();};
-$('#resetBtn').onclick=()=>{filter={region:'all',q:'',capMin:null,capMax:null,fav:false};
+$('#xbiSeg').onclick=()=>{filter.xbi=!filter.xbi;$('#xbiSeg').querySelector('button').classList.toggle('on',filter.xbi);render();};
+$('#resetBtn').onclick=()=>{filter={region:'all',q:'',capMin:null,capMax:null,fav:false,xbi:false};
   $('#q').value='';$('#capMin').value='';$('#capMax').value='';
   $$('#regionSeg button').forEach((x,i)=>x.classList.toggle('on',i===0));
-  $('#favSeg').querySelector('button').classList.remove('on');render();};
+  $('#favSeg').querySelector('button').classList.remove('on');
+  $('#xbiSeg').querySelector('button').classList.remove('on');render();};
 
 /* ---------------- modals ---------------- */
 function openModal(id){$('#'+id).classList.add('show');}
@@ -748,7 +806,7 @@ $('#setBtn').onclick=()=>openModal('setModal');
 let FH_KEY=localStorage.getItem('helix_fh')||'';
 $('#fhKey').value=FH_KEY;
 $('#saveKey').onclick=()=>{FH_KEY=$('#fhKey').value.trim();localStorage.setItem('helix_fh',FH_KEY);
-  $$('.modal').forEach(m=>m.classList.remove('show'));};
+  $$('.modal').forEach(m=>m.classList.remove('show')); header(); render();};
 
 /* optional live refresh of quote+news via Finnhub (best-effort) */
 async function liveRefresh(rec,m){ if(!FH_KEY)return; const sym=rec.r==='US'?rec.t:rec.t;
