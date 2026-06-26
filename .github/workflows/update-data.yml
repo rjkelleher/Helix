@@ -1,0 +1,44 @@
+name: Update HELIX data
+
+# Runs every weekday at 22:00 UTC (after the US market close), plus a manual button.
+on:
+  schedule:
+    - cron: "0 22 * * 1-5"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write          # allow the job to commit data.json back
+
+concurrency:
+  group: helix-data
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build data.json
+        run: python build_dashboard_data.py
+
+      - name: Commit data.json if it changed
+        run: |
+          git config user.name  "helix-bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data.json
+          if git diff --staged --quiet; then
+            echo "No data change — nothing to commit."
+          else
+            git commit -m "data: refresh $(date -u +'%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
