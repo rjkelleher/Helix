@@ -405,9 +405,9 @@ function heat(v){ if(v==null||isNaN(v))return''; const a=Math.min(.30,Math.abs(v
 /* ---------------- sparkline ---------------- */
 function spark(s){ const px=s.px.slice(-252); const w=64,h=22,n=px.length;
   const mn=Math.min(...px),mx=Math.max(...px),rg=mx-mn||1;
-  let d='';for(let i=0;i<n;i+=Math.ceil(n/30)){const x=(i/(n-1))*w,y=h-2-((px[i]-mn)/rg)*(h-4);d+=(d?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}
+  let d='';for(let i=0;i<n;i++){const x=(i/(n-1))*w,y=h-2-((px[i]-mn)/rg)*(h-4);d+=(d?'L':'M')+x.toFixed(1)+' '+y.toFixed(1);}
   const up=px[n-1]>=px[0],c=up?'#2EBD85':'#F0616D';
-  return `<svg class="spark" viewBox="0 0 ${w} ${h}"><path d="${d}" fill="none" stroke="${c}" stroke-width="1.4"/></svg>`;}
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}"><path d="${d}" fill="none" stroke="${c}" stroke-width="1.2" stroke-linejoin="round"/></svg>`;}
 
 /* ---------------- table ---------------- */
 const COLS=[
