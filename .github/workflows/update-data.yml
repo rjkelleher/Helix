@@ -1,3 +1,4 @@
+yaml
 name: Update HELIX data
 
 # Runs every weekday at 22:00 UTC (after the US market close), plus a manual button.
