@@ -79,7 +79,7 @@ input,select{font-family:inherit}
 
 /* ---------- grid ---------- */
 .tablewrap{flex:1 1 auto;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch}
-table{border-collapse:separate;border-spacing:0;width:100%;min-width:1180px}
+table{border-collapse:separate;border-spacing:0;width:100%;min-width:1360px}
 thead th{position:sticky;top:0;z-index:5;background:var(--surface);text-align:right;
   font-size:10.5px;font-weight:600;letter-spacing:.05em;color:var(--muted);text-transform:uppercase;
   padding:9px 12px;border-bottom:1px solid var(--line);white-space:nowrap;cursor:pointer;user-select:none}
@@ -255,7 +255,7 @@ canvas{display:block;width:100%}
   <div class="seg" id="xbiSeg" style="padding:0"><button data-xbi class="" style="display:flex;gap:4px;align-items:center"><span class="xbi" style="margin:0;vertical-align:baseline">*</span>XBI</button></div>
   <button class="linkish" id="resetBtn">Reset</button>
   <div class="grow"></div>
-  <div class="count"><b id="cnt">0</b> names</div>
+  <div class="count"><b id="cnt">0</b> names<span id="liveProg" style="color:var(--faint)"></span></div>
 </div>
 
 <div class="tablewrap">
@@ -277,9 +277,9 @@ canvas{display:block;width:100%}
     <button class="x" data-close>&times;</button>
     <h2>About this data</h2>
     <p id="infoBody"></p>
-    <p>The interface — sorting, filtering, charts, the stock detail view — is fully real. Only the <i>numbers</i> are illustrative until you connect a feed.</p>
+    <p class="demoNote">The interface — sorting, filtering, charts, the stock detail view — is fully real. Only the <i>numbers</i> are illustrative until you connect a feed.</p>
     <p><b class="xbi" style="margin:0">*</b> next to a ticker marks a current <b>S&amp;P Biotech (XBI)</b> constituent. In demo mode only the confirmed top names are flagged; when you build live data, the full, current XBI membership is loaded automatically from State Street's daily holdings file. Use the <b>XBI</b> filter to show only constituents.</p>
-    <p><b>To load your real numbers:</b> run the included <code>build_dashboard_data.py</code> against <code>tickers.csv</code>. It writes a <code>data.json</code> next to this page; reload and the badge turns green with your live snapshot.</p>
+    <p class="demoNote"><b>To load your real numbers:</b> run the included <code>build_dashboard_data.py</code> against <code>tickers.csv</code>. It writes a <code>data.json</code> next to this page; reload and the badge turns green with your live snapshot.</p>
     <p style="margin-top:14px"><button class="btn" data-close>Got it</button></p>
   </div>
 </div>
@@ -293,6 +293,7 @@ canvas{display:block;width:100%}
     <p><b>1 · Snapshot (recommended).</b> Run <code>build_dashboard_data.py</code>; it produces <code>data.json</code> (prices, history, fundamentals, news) for every ticker in <code>tickers.csv</code>. This page loads it automatically.</p>
     <p><b>2 · Live quotes &amp; news</b> in the detail view via a free <a class="linkish" href="https://finnhub.io" target="_blank" rel="noopener">Finnhub</a> key (optional; US names most reliable):</p>
     <div class="key"><input id="fhKey" placeholder="Finnhub API key (optional)" spellcheck="false"><button class="btn" id="saveKey">Save</button></div>
+    <div style="display:flex;gap:8px;margin-top:8px;align-items:center"><button class="btn ghost" id="testKey">Test key</button><span id="keyStatus" style="font-size:12px;color:var(--muted)"></span></div>
     <p style="font-size:11.5px;color:var(--faint)">Stored only in this browser. Leave blank to stay on snapshot/demo data.</p>
     <p>With a key connected, a <b>Live</b> column appears in the table (US names only): it shows the <b>pre-market</b> move before the open and the live <b>intraday</b> change once the market opens. It fetches the rows on screen, so it fills in as you scroll. Pre-market prints for thinly-traded small caps may be missing, and true pre-market data depends on your Finnhub tier.</p>
   </div>
@@ -363,7 +364,7 @@ function series(rec){
   const o={px,vol,ds:D,real:false,rec}; CACHE[rec.t]=o; return o;
 }
 
-const WIN={'1W':5,'1M':21,'YTD':'ytd','1Y':252,'5Y':1260,'MAX':NDAYS-1};
+const WIN={'1W':5,'1M':21,'3M':63,'YTD':'ytd','1Y':252,'5Y':1260,'MAX':NDAYS-1};
 function ytdIdx(ds){const y=ds[ds.length-1].getFullYear();for(let i=ds.length-1;i>=0;i--)if(ds[i].getFullYear()<y)return i+1;return 0;}
 function retOf(s,key){const px=s.px,n=px.length,last=px[n-1];
   let base; if(key==='ytd'){const i=ytdIdx(s.ds);base=px[Math.max(0,i-1)];}
@@ -390,8 +391,8 @@ function metrics(rec){
   const rev=mcap?mcap*(rnd()*0.5):null;
   const m={rec,s,last,prev,day:prev?last/prev-1:null,hi52:hi,lo52:lo,
     mcap,ev,cash,debt,shares,rev,
-    r1W:ret(s,'1W'),r1M:ret(s,'1M'),rYTD:ret(s,'YTD'),r1Y:ret(s,'1Y'),r5Y:ret(s,'5Y'),rMAX:ret(s,'MAX'),
-    vD:avgVol(s,'1D'),vW:avgVol(s,'1W'),vM:avgVol(s,'1M'),vYTD:avgVol(s,'YTD'),v1Y:avgVol(s,'1Y'),v5Y:avgVol(s,'5Y')};
+    r1W:ret(s,'1W'),r1M:ret(s,'1M'),r3M:ret(s,'3M'),rYTD:ret(s,'YTD'),r1Y:ret(s,'1Y'),r5Y:ret(s,'5Y'),rMAX:ret(s,'MAX'),
+    vD:avgVol(s,'1D'),vW:avgVol(s,'1W'),vM:avgVol(s,'1M'),v3M:avgVol(s,'3M'),vYTD:avgVol(s,'YTD'),v1Y:avgVol(s,'1Y'),v5Y:avgVol(s,'5Y')};
   if(s.real&&s.detail){Object.assign(m,{ev:s.detail.ev??m.ev,cash:s.detail.cash??m.cash,debt:s.detail.debt??m.debt,
     shares:s.detail.shares??m.shares,rev:s.detail.rev??m.rev,hi52:s.detail.hi52??m.hi52,lo52:s.detail.lo52??m.lo52,
     website:s.detail.website,news:s.detail.news});}
@@ -427,24 +428,26 @@ const COLS=[
  {k:'r',t:'Rgn',l:true,kind:'s'},
  {k:'mcap',t:'Mkt Cap',kind:'n'},
  {k:'last',t:'Price',kind:'n'},
- {k:'day',t:'Day',kind:'n',heat:true},
  {k:'live',t:'Live',kind:'n'},
+ {k:'day',t:'Day',kind:'n',heat:true},
  {k:'r1W',t:'1W',kind:'n',heat:true},
  {k:'r1M',t:'1M',kind:'n',heat:true},
+ {k:'r3M',t:'3M',kind:'n',heat:true},
  {k:'rYTD',t:'YTD',kind:'n',heat:true},
  {k:'r1Y',t:'1Y',kind:'n',heat:true},
  {k:'vD',t:'Vol D',kind:'n'},
  {k:'vW',t:'Avg V·W',kind:'n'},
  {k:'vM',t:'Avg V·M',kind:'n'},
+ {k:'v3M',t:'Avg V·3M',kind:'n'},
  {k:'vYTD',t:'Avg V·YTD',kind:'n'},
  {k:'v1Y',t:'Avg V·1Y',kind:'n'},
  {k:'spark',t:'Trend',l:false,sort:false},
 ];
-let ROWS=[], sortKey='mcap', sortDir=-1;
+let ROWS=[], sortKey='mcap', sortDir=-1, ROWMAP={};
 const FAV=new Set(JSON.parse(localStorage.getItem('helix_fav')||'[]'));
 let filter={region:'all',q:'',capMin:null,capMax:null,fav:false,xbi:false};
 
-function buildRows(){ ROWS=UNIVERSE.map(metrics); }
+function buildRows(){ ROWS=UNIVERSE.map(metrics); ROWMAP={}; ROWS.forEach(m=>ROWMAP[m.rec.t]=m); }
 function header(){
   const tr=$('#hrow'); tr.innerHTML=''; const ls=liveSession();
   COLS.forEach(c=>{
@@ -473,6 +476,7 @@ function render(){
   list.sort((a,b)=>{ let av,bv;
     if(k==='mcap'){av=a.mcap;bv=b.mcap;} else if(['t','n','r'].includes(k)){av=(a.rec[k]||'');bv=(b.rec[k]||'');return av.localeCompare(bv)*d;}
     else if(k==='live'){av=(LIVE[a.rec.t]||{}).dp;bv=(LIVE[b.rec.t]||{}).dp;}
+    else if(k==='day'){av=dayVal(a);bv=dayVal(b);}
     else{av=a[k];bv=b[k];}
     av=(av==null||isNaN(av))?-Infinity:av; bv=(bv==null||isNaN(bv))?-Infinity:bv; return (av-bv)*d;});
   const tb=$('#tbody'); tb.innerHTML='';
@@ -486,15 +490,17 @@ function render(){
       `<td class="l"><span class="rchip">${m.rec.r==='ex-US'?'EX':'US'}</span></td>`+
       `<td class="num">${fmtUSD(m.mcap)}</td>`+
       `<td class="num">${fmtPx(m.last)}</td>`+
-      `<td class="ret ${cls(m.day)}" style="${heat(m.day)}">${fmtPct(m.day)}</td>`+
       (FH_KEY?(m.rec.r==='US'?`<td class="ret live" data-t="${m.rec.t}">${liveCell(m.rec.t)}</td>`:`<td class="ret" style="color:var(--faint)">—</td>`):'')+
+      `<td class="ret dayc ${cls(dayVal(m))}" data-t="${m.rec.t}" style="${heat(dayVal(m))}">${fmtPct(dayVal(m))}</td>`+
       `<td class="ret ${cls(m.r1W)}" style="${heat(m.r1W)}">${fmtPct(m.r1W)}</td>`+
       `<td class="ret ${cls(m.r1M)}" style="${heat(m.r1M)}">${fmtPct(m.r1M)}</td>`+
+      `<td class="ret ${cls(m.r3M)}" style="${heat(m.r3M)}">${fmtPct(m.r3M)}</td>`+
       `<td class="ret ${cls(m.rYTD)}" style="${heat(m.rYTD)}">${fmtPct(m.rYTD)}</td>`+
       `<td class="ret ${cls(m.r1Y)}" style="${heat(m.r1Y)}">${fmtPct(m.r1Y)}</td>`+
       `<td class="num">${fmtVol(m.vD)}</td>`+
       `<td class="num">${fmtVol(m.vW)}</td>`+
       `<td class="num">${fmtVol(m.vM)}</td>`+
+      `<td class="num">${fmtVol(m.v3M)}</td>`+
       `<td class="num">${fmtVol(m.vYTD)}</td>`+
       `<td class="num">${fmtVol(m.v1Y)}</td>`+
       `<td>${spark(m.s)}</td>`;
@@ -505,11 +511,11 @@ function render(){
   $$('.star',tb).forEach(el=>el.onclick=e=>{e.stopPropagation();const t=el.dataset.fav;
     if(FAV.has(t))FAV.delete(t);else FAV.add(t);
     localStorage.setItem('helix_fav',JSON.stringify([...FAV])); render();});
-  observeLive();
+  liveProgress();
 }
 
 /* ---------------- live pre-market / intraday column (Finnhub, US only) ---------------- */
-const LIVE={}; const liveQueue=[]; const liveQueued=new Set(); let liveTimer=null, liveObs=null;
+const LIVE={}; let liveTimer=null, bgIdx=0, usSyms=[];
 function liveSession(){
   const p=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
   const g=t=>(p.find(x=>x.type===t)||{}).value; let hh=(+g('hour'))%24; const mins=hh*60+(+g('minute')); const wd=g('weekday');
@@ -519,36 +525,48 @@ function liveSession(){
   if(mins>=960&&mins<1200) return {label:'After-hrs',active:true}; // 16:00–20:00 ET
   return {label:'Last',active:false};
 }
+function usList(){ if(!usSyms.length) usSyms=UNIVERSE.filter(u=>u.r==='US').map(u=>u.t); return usSyms; }
+function dayVal(m){ const x=LIVE[m.rec.t]; if(m.rec.r==='US'&&x&&x.dp!=null&&!isNaN(x.dp))return x.dp/100; return m.day; }
+function dayValT(t){ const m=ROWMAP[t]; return m?dayVal(m):null; }
 function liveCell(t){const x=LIVE[t];
   if(x&&x.dp!=null&&!isNaN(x.dp))return `<span class="${cls(x.dp)}">${fmtPctS(x.dp/100)}</span>`;
-  if(x&&x.err)return '<span style="color:var(--faint)">—</span>';
+  if(x&&x.err)return `<span style="color:var(--faint)" title="${x.err}">—</span>`;
   return '<span style="color:var(--faint)">·</span>';}
-function updateLiveCell(t){const el=document.querySelector('.live[data-t="'+t+'"]'); if(el)el.innerHTML=liveCell(t);}
-function enqueueLive(t){ if(!FH_KEY)return; const x=LIVE[t]; if(x&&Date.now()-x.ts<40000)return;
-  if(liveQueued.has(t))return; liveQueued.add(t); liveQueue.push(t); startLive(); }
-function startLive(){ if(liveTimer)return; liveTimer=setInterval(async()=>{
-  if(!liveQueue.length){clearInterval(liveTimer);liveTimer=null;return;}
-  const t=liveQueue.shift(); liveQueued.delete(t);
+function paintLive(t){
+  const c=document.querySelector('.live[data-t="'+t+'"]'); if(c)c.innerHTML=liveCell(t);
+  const d=document.querySelector('.dayc[data-t="'+t+'"]'); if(d){const v=dayValT(t);
+    d.className='ret dayc '+cls(v); d.setAttribute('style',heat(v)); d.innerHTML=fmtPct(v);}
+  liveProgress();
+}
+function liveProgress(){ const el=$('#liveProg'); if(!el)return; if(!FH_KEY){el.textContent='';return;}
+  const list=usList(), n=list.filter(t=>LIVE[t]&&LIVE[t].dp!=null).length;
+  el.textContent=' · live '+n+'/'+list.length; }
+async function fetchQuote(t){
   try{const j=await (await fetch('https://finnhub.io/api/v1/quote?symbol='+encodeURIComponent(t)+'&token='+FH_KEY)).json();
-    LIVE[t]=(j&&j.c)?{dp:j.dp,c:j.c,pc:j.pc,ts:Date.now()}:{dp:null,err:true,ts:Date.now()};
-  }catch(e){LIVE[t]={dp:null,err:true,ts:Date.now()};}
-  updateLiveCell(t);
-},1200); }  // ~50 calls/min, under Finnhub's free limit
-function observeLive(){ if(!FH_KEY)return; if(liveObs)liveObs.disconnect();
-  liveObs=new IntersectionObserver(es=>es.forEach(e=>{ if(!e.isIntersecting)return;
-    const t=e.target.dataset.t, rec=UNIVERSE.find(u=>u.t===t); if(rec&&rec.r==='US')enqueueLive(t);}),
-    {root:$('.tablewrap'),rootMargin:'120px'});
-  $$('.live').forEach(el=>liveObs.observe(el)); }
-setInterval(()=>{ if(!FH_KEY)return; const wrap=$('.tablewrap'); if(!wrap)return; const r=wrap.getBoundingClientRect();
-  $$('.live').forEach(el=>{const b=el.getBoundingClientRect(); if(b.bottom>r.top&&b.top<r.bottom){
-    const t=el.dataset.t,x=LIVE[t]; if(x&&Date.now()-x.ts<35000)return;
-    const rec=UNIVERSE.find(u=>u.t===t); if(rec&&rec.r==='US')enqueueLive(t);}});},45000);   // refresh on-screen rows
+    LIVE[t]=(j&&typeof j.c==='number'&&j.c>0)?{dp:j.dp,c:j.c,pc:j.pc,ts:Date.now()}
+                                             :{dp:null,err:(j&&j.error)?String(j.error).slice(0,60):'no data',ts:Date.now()};
+  }catch(e){LIVE[t]={dp:null,err:'network/blocked',ts:Date.now()};}
+  paintLive(t);
+}
+function visibleUS(){ const wrap=$('.tablewrap'); if(!wrap)return[]; const r=wrap.getBoundingClientRect(); const out=[];
+  $$('.live').forEach(el=>{const b=el.getBoundingClientRect(); if(b.bottom>r.top-60&&b.top<r.bottom+60)out.push(el.dataset.t);}); return out; }
+function startLiveLoop(){ if(liveTimer||!FH_KEY)return;
+  liveTimer=setInterval(()=>{
+    if(!FH_KEY){clearInterval(liveTimer);liveTimer=null;return;}
+    const now=Date.now(); const vis=visibleUS();
+    let pick=vis.find(t=>{const x=LIVE[t]; return !x||now-x.ts>40000;});   // on-screen freshness first
+    if(!pick){ const list=usList();                                        // then cycle the whole table
+      for(let i=0;i<list.length;i++){const t=list[(bgIdx+i)%list.length], x=LIVE[t];
+        if(!x||now-x.ts>180000){pick=t;bgIdx=(bgIdx+i+1)%list.length;break;} } }
+    if(pick)fetchQuote(pick);
+  },1150);   // ~52 calls/min, under Finnhub's 60/min free cap
+}
 setInterval(()=>{ if($('#hrow')&&FH_KEY)header(); },60000);   // re-label header as the session changes
 
 /* ---------------- detail view ---------------- */
-let curRange='1Y', curRet='1Y', curVol='1Y', curMetric=null;
+let curRange='1Y', curRet='1Y', curVol='1Y', curSI='1W', curMetric=null;
 function openDetail(rec){
-  const m=metrics(rec); curMetric=m; curRange='1Y';curRet='1Y';curVol='1Y';
+  const m=metrics(rec); curMetric=m; curRange='1Y';curRet='1Y';curVol='1Y';curSI='1W';
   const web = m.website || ('https://www.google.com/search?q='+encodeURIComponent((rec.n||rec.t)+' investor relations'));
   const news = m.news || demoNews(rec);
   const HOLD = holdersOf(rec,m);
@@ -590,12 +608,18 @@ function openDetail(rec){
        <div class="metricrow">
          <div class="metriclabel">Return</div>
          <div class="metricval ${cls(m['r'+curRet]||m.rYTD)}" id="retVal">${fmtPct(m['r'+curRet])}</div>
-         <div class="metricbtns" id="retBtns">${['1W','1M','YTD','1Y','5Y','MAX'].map(r=>`<button data-r="${r}" class="${r==='1Y'?'on':''}">${r}</button>`).join('')}</div>
+         <div class="metricbtns" id="retBtns">${['1W','1M','3M','YTD','1Y','5Y','MAX'].map(r=>`<button data-r="${r}" class="${r==='1Y'?'on':''}">${r}</button>`).join('')}</div>
        </div>
-       <div class="metricrow" style="padding-bottom:16px">
+       <div class="metricrow">
          <div class="metriclabel">Average daily volume</div>
          <div class="metricval" id="volVal">${fmtVol(mv(m,curVol))}</div>
-         <div class="metricbtns" id="volBtns">${['1W','1M','YTD','1Y','5Y'].map(r=>`<button data-r="${r}" class="${r==='1Y'?'on':''}">${r}</button>`).join('')}</div>
+         <div class="metricbtns" id="volBtns">${['1W','1M','3M','YTD','1Y','5Y'].map(r=>`<button data-r="${r}" class="${r==='1Y'?'on':''}">${r}</button>`).join('')}</div>
+       </div>
+       <div class="metricrow" style="padding-bottom:16px">
+         <div class="metriclabel">Short interest (% of float)</div>
+         <div class="metricval" id="siVal">${fmtSI(siVal(rec,curSI))}</div>
+         <div class="metricbtns" id="siBtns">${['1W','1M','3M','YTD','1Y','5Y'].map(r=>`<button data-r="${r}" class="${r==='1W'?'on':''}">${r}</button>`).join('')}</div>
+         <div style="font-size:10.5px;color:var(--faint);margin-top:8px">${siNote(rec)}</div>
        </div>
      </div>
 
@@ -642,11 +666,31 @@ function openDetail(rec){
   $('#volBtns').onclick=e=>{const b=e.target.closest('button');if(!b)return;curVol=b.dataset.r;
     $$('#volBtns button').forEach(x=>x.classList.toggle('on',x===b));
     $('#volVal').textContent=fmtVol(mv(m,curVol));};
+  $('#siBtns').onclick=e=>{const b=e.target.closest('button');if(!b)return;curSI=b.dataset.r;
+    $$('#siBtns button').forEach(x=>x.classList.toggle('on',x===b));
+    $('#siVal').textContent=fmtSI(siVal(rec,curSI));};
   $('#holders').onclick=e=>{const b=e.target.closest('.hrow');if(!b)return;openFund(b.dataset.fund,rec);};
   if(REAL && FH_KEY) liveRefresh(rec,m);
   requestAnimationFrame(drawChart);
 }
-function mv(m,r){return ({'1W':m.vW,'1M':m.vM,'YTD':m.vYTD,'1Y':m.v1Y,'5Y':m.v5Y})[r];}
+function mv(m,r){return ({'1W':m.vW,'1M':m.vM,'3M':m.v3M,'YTD':m.vYTD,'1Y':m.v1Y,'5Y':m.v5Y})[r];}
+function fmtSI(v){return v==null||isNaN(v)?'—':(v*100).toFixed(1)+'%';}
+function siVal(rec,period){
+  const real=REAL&&REAL.map&&REAL.map[rec.t]&&REAL.map[rec.t].si;
+  if(real){ return (period==='1W'&&real.pf!=null)?real.pf:null; }  // live: only the current figure is real
+  const b=mulberry(hash(rec.t+'|SI')); const base=0.005+b()*b()*0.30;   // demo: modeled, skewed low
+  const f={'1W':1,'1M':0.95,'3M':0.88,'YTD':0.83,'1Y':0.75,'5Y':0.62};
+  const j=mulberry(hash(rec.t+'|SI|'+period));
+  return Math.max(0.002, base*(f[period]||1)*(0.85+0.3*j()));
+}
+function siNote(rec){
+  const real=REAL&&REAL.map&&REAL.map[rec.t]&&REAL.map[rec.t].si;
+  if(real){ if(real.pf==null) return 'Short interest not provided by the feed for this name.';
+    const dt=real.date?new Date(real.date*1000).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'2-digit'}):'';
+    const ratio=real.ratio!=null?` · ${real.ratio.toFixed(1)}d to cover`:'';
+    return `Current from feed: ${(real.pf*100).toFixed(1)}% of float${ratio}${dt?' · as of '+dt:''}. Other periods aren't in the free feed (official SI reports ~twice monthly).`; }
+  return 'Modeled for illustration — official short interest reports ~twice monthly and isn\'t in the free feed.';
+}
 function closeDetail(){$('#detail').classList.remove('show');$('#scrim').classList.remove('show');$('#detail').setAttribute('aria-hidden','true');closeFund();}
 function closeFund(){const f=$('#fundpanel');f.classList.remove('show');f.setAttribute('aria-hidden','true');}
 $('#scrim').onclick=closeDetail;
@@ -806,7 +850,14 @@ $('#setBtn').onclick=()=>openModal('setModal');
 let FH_KEY=localStorage.getItem('helix_fh')||'';
 $('#fhKey').value=FH_KEY;
 $('#saveKey').onclick=()=>{FH_KEY=$('#fhKey').value.trim();localStorage.setItem('helix_fh',FH_KEY);
-  $$('.modal').forEach(m=>m.classList.remove('show')); header(); render();};
+  $$('.modal').forEach(m=>m.classList.remove('show')); header(); render(); startLiveLoop();};
+$('#testKey').onclick=async()=>{const k=$('#fhKey').value.trim()||FH_KEY; const s=$('#keyStatus');
+  if(!k){s.textContent='Enter a key first.';s.style.color='var(--amber)';return;}
+  s.textContent='Testing…';s.style.color='var(--muted)';
+  try{const j=await (await fetch('https://finnhub.io/api/v1/quote?symbol=AAPL&token='+k)).json();
+    if(j&&typeof j.c==='number'&&j.c>0){s.textContent='✓ Working — AAPL $'+j.c.toFixed(2);s.style.color='var(--up)';}
+    else{s.textContent='✗ '+(j.error||'no data returned');s.style.color='var(--down)';}
+  }catch(e){s.textContent='✗ network/blocked';s.style.color='var(--down)';}};
 
 /* optional live refresh of quote+news via Finnhub (best-effort) */
 async function liveRefresh(rec,m){ if(!FH_KEY)return; const sym=rec.r==='US'?rec.t:rec.t;
@@ -818,12 +869,14 @@ async function liveRefresh(rec,m){ if(!FH_KEY)return; const sym=rec.r==='US'?rec
 
 function setInfo(){ $('#infoBody').innerHTML = REAL
   ? `Showing a <b>live snapshot</b> generated ${REAL.asof||''} from your data feed for all ${UNIVERSE.length} names.`
-  : `You're viewing <b>demo data</b>: the ${UNIVERSE.length} tickers, company names, regions and market-cap tiers are the <b>real</b> universe we built, but prices, returns, volumes and fundamentals are deterministically simulated for illustration.`;}
+  : `You're viewing <b>demo data</b>: the ${UNIVERSE.length} tickers, company names, regions and market-cap tiers are the <b>real</b> universe we built, but prices, returns, volumes and fundamentals are deterministically simulated for illustration.`;
+  $$('.demoNote').forEach(el=>el.style.display=REAL?'none':'');
+}
 
 /* ---------------- boot ---------------- */
 (async function(){
   await loadReal();
-  buildRows(); header(); render(); setInfo();
+  buildRows(); header(); render(); setInfo(); startLiveLoop();
   if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js');}catch(e){}}
 })();
 </script>

@@ -40,6 +40,34 @@ def fx_rates(curs):
             rates[c]=None
     return rates
 
+def xbi_constituents():
+    """Authoritative current XBI membership from State Street's daily holdings file."""
+    import io, urllib.request
+    url = "https://www.ssga.com/library-content/products/fund-data/etfs/us/holdings-daily-us-en-xbi.xlsx"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        raw = urllib.request.urlopen(req, timeout=30).read()
+        head = pd.read_excel(io.BytesIO(raw), header=None, engine="openpyxl")
+        hdr = None
+        for i in range(min(25, len(head))):
+            vals = [str(x).strip().lower() for x in head.iloc[i].tolist()]
+            if "ticker" in vals:
+                hdr = i; break
+        if hdr is None:
+            print("XBI: header row not found"); return set()
+        df = pd.read_excel(io.BytesIO(raw), header=hdr, engine="openpyxl")
+        col = [c for c in df.columns if str(c).strip().lower() == "ticker"][0]
+        out = set()
+        for t in df[col].dropna().tolist():
+            t = str(t).strip().upper()
+            if t and t.replace(".", "").replace("-", "").isalnum() and t not in ("CASH", "USD", "-"):
+                out.add(t)
+        print(f"XBI constituents fetched: {len(out)}")
+        return out
+    except Exception as e:
+        print("XBI fetch failed (asterisks will be empty this run):", e)
+        return set()
+
 def rel(ts):
     try:
         d=dt.datetime.utcfromtimestamp(ts); s=(dt.datetime.utcnow()-d).total_seconds()
@@ -65,7 +93,10 @@ def main():
                 nfo=t.info
                 d.update(ev=nfo.get("enterpriseValue"), cash=nfo.get("totalCash"),
                          debt=nfo.get("totalDebt"), shares=nfo.get("sharesOutstanding"),
-                         rev=nfo.get("totalRevenue"), website=nfo.get("website"))
+                         rev=nfo.get("totalRevenue"), website=nfo.get("website"),
+                         si_pf=nfo.get("shortPercentOfFloat"), si_ratio=nfo.get("shortRatio"),
+                         si_shares=nfo.get("sharesShort"), si_prior=nfo.get("sharesShortPriorMonth"),
+                         si_date=nfo.get("dateShortInterest"))
             except Exception: pass
             try:
                 news=[]
@@ -92,6 +123,7 @@ def main():
         except Exception:
             info[s]={}; ccy[s]=None
     fx=fx_rates(set(ccy.values()))
+    xbi=xbi_constituents()
 
     rows=[]
     for s,name,region in uni:
@@ -108,6 +140,9 @@ def main():
         rows.append({"t":s,"n":name,"r":region,
             "mc":usd("mc"),"ev":usd("ev"),"cash":usd("cash"),"debt":usd("debt"),
             "shares":d.get("shares"),"rev":usd("rev"),"website":d.get("website"),
+            "xbi": s in xbi,
+            "si":{"pf":d.get("si_pf"),"ratio":d.get("si_ratio"),"shares":d.get("si_shares"),
+                  "prior":d.get("si_prior"),"date":d.get("si_date")},
             "hi52":hi52,"lo52":lo52,"news":d.get("news",[]),
             "holders":[{"name":hd["name"],"shares":hd["shares"],
                         "value":(hd["value"]*rate) if hd.get("value") else hd.get("value"),
